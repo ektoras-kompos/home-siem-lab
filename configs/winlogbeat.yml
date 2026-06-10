@@ -1,0 +1,12 @@
+winlogbeat.event_logs:
+  - name: Application
+  - name: System
+  - name: Security
+
+output.logstash:
+  hosts: ["192.168.53.40:5044"]
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: C:\ProgramData\winlogbeat\Logs
