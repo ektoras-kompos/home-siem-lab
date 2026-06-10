@@ -10,7 +10,7 @@ The lab was built entirely on consumer hardware using free and open-source tools
 
 ## Architecture
 
-![alt text](image.png)
+![alt text](screenshots/image.png)
 
 ### VM Specifications
 
