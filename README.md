@@ -11,16 +11,16 @@ The lab was built entirely on consumer hardware using free and open-source tools
 ## Architecture
 
 ```
-192.168.56.0/24  —  Host-only network (isolated)
+192.168.53.0/24  —  Host-only network (isolated)
 
-┌─────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                  Physical Host (VirtualBox)              │
-│                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Kali Linux   │  │Windows Server│  │Ubuntu Server │  │
-│  │ .56.30       │  │ .56.10       │  │ .56.20       │  │
-│  │ Attacker     │  │ Victim       │  │ Victim       │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │ Kali Linux   │  │Windows Server│  │Ubuntu Server │    │
+│  │ .53.30       │  │ .53.10       │  │ .53.20       │    │
+│  │ Attacker     │  │ Victim       │  │ Victim       │    │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
 │         │  attacks        │ Winlogbeat       │ Filebeat  │
 │         │ ──────────────► │ logs             │ logs      │
 │         │                 └──────────────────┘           │
@@ -28,22 +28,22 @@ The lab was built entirely on consumer hardware using free and open-source tools
 │         │                          ▼                     │
 │         │               ┌──────────────────┐             │
 │         │               │  Elastic SIEM    │             │
-│         │               │  .56.40          │             │
+│         │               │  .53.40          │             │
 │         │               │  Elasticsearch   │             │
 │         │               │  Logstash        │             │
 │         │               │  Kibana          │             │
 │         │               └──────────────────┘             │
-└─────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### VM Specifications
 
 | VM | OS | IP | Role | RAM | CPUs |
 |---|---|---|---|---|---|
-| Windows Server | Windows Server 2022 | 192.168.56.10 | Victim | 4 GB | 2 |
-| Ubuntu Server | Ubuntu Server 22.04 LTS | 192.168.56.20 | Victim | 2 GB | 1 |
-| Kali Linux | Kali Linux (latest) | 192.168.56.30 | Attacker | 2 GB | 2 |
-| Elastic SIEM | Ubuntu Server 22.04 LTS | 192.168.56.40 | SIEM | 4 GB | 2 |
+| Windows Server | Windows Server 2022 | 192.168.53.10 | Victim | 4 GB | 2 |
+| Ubuntu Server | Ubuntu Server 22.04 LTS | 192.168.53.20 | Victim | 2 GB | 1 |
+| Kali Linux | Kali Linux (latest) | 192.168.53.30 | Attacker | 2 GB | 2 |
+| Elastic SIEM | Ubuntu Server 22.04 LTS | 192.168.53.40 | SIEM | 4 GB | 2 |
 
 ---
 
@@ -65,7 +65,7 @@ The lab was built entirely on consumer hardware using free and open-source tools
 
 ### Step 1 — Virtual Network
 
-Configured all four VMs on an isolated host-only network (`192.168.56.0/24`) with a secondary NAT adapter for internet access. Each VM was assigned a static IP to ensure consistent log source attribution. The host-only network keeps all attack traffic contained within the lab — no risk of accidentally targeting external systems.
+Configured all four VMs on an isolated host-only network (`192.168.53.0/24`) with a secondary NAT adapter for internet access. Each VM was assigned a static IP to ensure consistent log source attribution. The host-only network keeps all attack traffic contained within the lab — no risk of accidentally targeting external systems.
 
 ### Step 2 — Log Shippers
 
@@ -96,7 +96,7 @@ Four visualisations were created in a single `SIEM Lab — Attack Overview` dash
 
 **Failed logins over time** — bar chart showing failed authentication events over time. The brute force attack appears as a clear spike, making it easy to identify the moment an attack began.
 
-**Top attacking source IPs** — horizontal bar chart of source IPs ranked by failed login count. Immediately identifies `192.168.56.30` (Kali) as the primary threat actor.
+**Top attacking source IPs** — horizontal bar chart of source IPs ranked by failed login count. Immediately identifies `192.168.53.30` (Kali) as the primary threat actor.
 
 **Most targeted usernames** — horizontal bar chart of usernames ranked by failed login attempts. Shows which accounts are being actively enumerated.
 
@@ -124,35 +124,35 @@ Four visualisations were created in a single `SIEM Lab — Attack Overview` dash
 |---|---|
 | Type | Threshold |
 | Query | `event.code: "4625"` |
-| Threshold | 5 or more events from the same `source.ip` within 5 minutes |
+| Threshold | 5 or more events from the same `winlog.event_data.IpAddress` within 1 minute |
 | Severity | High |
 | Risk score | 70 |
 
-**Threshold reasoning:** Windows Event ID 4625 fires on every failed interactive or network logon. A slightly longer window (5 minutes) was chosen compared to SSH because RDP and SMB brute force tools tend to operate more slowly to avoid lockout policies.
+**Threshold reasoning:** Windows Event ID 4625 fires on every failed interactive or network logon. The threshold field was updated to `winlog.event_data.IpAddress` to group directly on the attacker IP as it appears in Windows event data, rather than the ECS-normalised `source.ip` field.
 
-### Rule 3 — Port Scan Detection
+### Rule 3 — Port Scan Detected — Ubuntu
 
 | Property | Value |
 |---|---|
 | Type | Threshold |
-| Query | `event.category: "network" AND event.type: "connection"` |
-| Threshold | 20 or more unique destination ports from the same `source.ip` within 1 minute |
+| Query | `event.module: "system" AND event.dataset: "system.syslog" AND message: "*[UFW BLOCK]*"` |
+| Threshold | 5 or more events from the same `host.id` within 1 minute |
 | Severity | Medium |
-| Risk score | 50 |
+| Risk score | 47 |
 
-**Threshold reasoning:** Legitimate traffic rarely touches more than a handful of ports in quick succession. Twenty unique ports in a minute is a strong indicator of automated scanning, while being high enough to ignore brief connection bursts from normal applications.
+**Threshold reasoning:** UFW BLOCK entries in syslog indicate the firewall is dropping unsolicited inbound packets. Five or more such events in quick succession from the same host is a reliable indicator of a port scan hitting the Ubuntu victim, while being high enough to filter out occasional background noise.
 
-### Rule 4 — Successful Login from Known Attacker IP
+### Rule 4 — Port Scan Detected — Windows
 
 | Property | Value |
 |---|---|
 | Type | Threshold |
-| Query | `event.outcome: "success" AND source.ip: "192.168.56.30"` |
-| Threshold | 1 or more events |
-| Severity | Critical |
-| Risk score | 90 |
+| Query | `winlog.event_id: "5156" AND winlog.event_data.Direction: "Inbound"` |
+| Threshold | 5 or more events from the same `winlog.event_data.SourceAddress` within 1 minute |
+| Severity | Medium |
+| Risk score | 47 |
 
-**Threshold reasoning:** Any successful authentication originating from a known attacker IP is critical regardless of volume. A single successful login after a brute force attempt is a potential indicator of compromise and warrants immediate investigation.
+**Threshold reasoning:** Windows Filtering Platform event 5156 fires when a connection is permitted by the firewall. Grouping by source address and triggering on five or more inbound connection events in one minute identifies hosts conducting rapid port enumeration against the Windows victim.
 
 ---
 
@@ -201,7 +201,7 @@ sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana_system 
 
 **Solution:** Manually triggered Security app initialisation via the Kibana API:
 ```bash
-curl -u elastic:password -k -X POST https://192.168.56.40:5601/api/detection_engine/index \
+curl -u elastic:password -k -X POST https://192.168.53.40:5601/api/detection_engine/index \
   -H "kbn-xsrf: true" \
   -H "Content-Type: application/json"
 ```
