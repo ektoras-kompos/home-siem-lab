@@ -171,19 +171,6 @@ sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana_system 
 
 **Lesson:** Elastic's documentation for different versions can be inconsistent. The `setup-passwords` tool is deprecated in newer versions of Elasticsearch 8.x in favour of `reset-password`. Always check which version of Elasticsearch is running and use the corresponding tooling.
 
-### Problem 4 — Detection Engine Initialisation
-
-**Issue:** Navigating to Security → Rules returned the error: *"Users with write permission need to access the Elastic Security app to initialize the app source data."*
-
-**Solution:** Manually triggered Security app initialisation via the Kibana API:
-```bash
-curl -u elastic:password -k -X POST https://192.168.53.40:5601/api/detection_engine/index \
-  -H "kbn-xsrf: true" \
-  -H "Content-Type: application/json"
-```
-
-**Lesson:** The Elastic Security app requires a one-time initialisation step to create its internal data streams (`.siem-signals-*`). This is not clearly documented in the UI error message and requires either an API call or navigating to the Security app as a superuser for the first time.
-
 ---
 
 ## What I Would Do Differently in Production
@@ -193,7 +180,6 @@ curl -u elastic:password -k -X POST https://192.168.53.40:5601/api/detection_eng
 - Store credentials in the **Elasticsearch keystore** rather than plaintext in config files
 - Set up **index lifecycle management (ILM)** to automatically roll over and delete old indices — in a real environment logs accumulate quickly
 - Implement **account lockout policies** on both victim machines — this lab intentionally left them off to allow brute force simulation, but in production lockout after 5 failures is standard
-- Deploy a **dedicated log retention solution** (cold storage, S3 snapshots) for long-term forensic evidence preservation
 
 ---
 
