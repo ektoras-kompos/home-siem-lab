@@ -10,31 +10,7 @@ The lab was built entirely on consumer hardware using free and open-source tools
 
 ## Architecture
 
-```
-192.168.53.0/24  —  Host-only network (isolated)
-
-┌──────────────────────────────────────────────────────────┐
-│                  Physical Host (VirtualBox)              │
-│                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │ Kali Linux   │  │Windows Server│  │Ubuntu Server │    │
-│  │ .53.30       │  │ .53.10       │  │ .53.20       │    │
-│  │ Attacker     │  │ Victim       │  │ Victim       │    │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
-│         │  attacks        │ Winlogbeat       │ Filebeat  │
-│         │ ──────────────► │ logs             │ logs      │
-│         │                 └──────────────────┘           │
-│         │                          │                     │
-│         │                          ▼                     │
-│         │               ┌──────────────────┐             │
-│         │               │  Elastic SIEM    │             │
-│         │               │  .53.40          │             │
-│         │               │  Elasticsearch   │             │
-│         │               │  Logstash        │             │
-│         │               │  Kibana          │             │
-│         │               └──────────────────┘             │
-└──────────────────────────────────────────────────────────┘
-```
+![alt text](image.png)
 
 ### VM Specifications
 
