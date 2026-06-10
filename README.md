@@ -183,28 +183,6 @@ sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana_system 
 
 ---
 
-## Repository Structure
-
-```
-/
-├── README.md                   ← this document
-├── configs/
-│   ├── logstash-pipeline.conf  ← Logstash beats input and grok filters
-│   ├── filebeat.yml            ← Filebeat config (Ubuntu/Kali)
-│   └── winlogbeat.yml          ← Winlogbeat config (Windows)
-├── rules/
-│   └── detection-rules.ndjson  ← Exported Kibana detection rules
-├── screenshots/
-│   ├── dashboard-overview.png
-│   ├── failed-logins-spike.png
-│   ├── alerts-firing.png
-│   └── rule-configuration.png
-└── notes/
-    └── troubleshooting.md      ← Detailed troubleshooting notes
-```
-
----
-
 ## Skills Demonstrated
 
 - Virtual network design and segmentation
